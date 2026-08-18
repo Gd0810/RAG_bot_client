@@ -1,0 +1,209 @@
+{% extends "orgbot/base.html" %}
+{% load static %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="navbar-inner">
+        <div class="brand">
+            <span class="brand-dot"></span>
+            {{ profile.name|default:"Your Organization" }}
+        </div>
+        <div class="nav-links">
+            <a href="#about">About</a>
+            <a href="#gallery">Gallery</a>
+            <a href="#chat">Ask our AI</a>
+        </div>
+    </div>
+</nav>
+
+<header class="hero">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <span class="pill">✦ Powered by Organization RAG Assistant</span>
+            <h1>{{ profile.name|default:"Your Organization" }}</h1>
+            <p class="tagline">{{ profile.tagline }}</p>
+            <p class="about-snippet">{{ profile.about }}</p>
+            <div class="hero-actions">
+                <a href="#chat" class="btn btn-primary">Chat with our AI Assistant</a>
+                {% if profile.website_url %}
+                <a href="{{ profile.website_url }}" class="btn btn-ghost" target="_blank" rel="noopener">Visit Website</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="hero-image-wrap">
+            {% if profile.hero_image %}
+                <img src="{{ profile.hero_image.url }}" alt="{{ profile.name }}" class="hero-image">
+            {% else %}
+                <img src="https://placehold.co/640x480/png?text={{ profile.name|urlencode|default:'Organization' }}" alt="Organization placeholder" class="hero-image">
+            {% endif %}
+            <div class="floating-card floating-card-1">🚀 Empowering Future Innovators</div>
+            <div class="floating-card floating-card-2">🤝 Trusted by our Students</div>
+        </div>
+    </div>
+    <div class="hero-wave"></div>
+</header>
+
+<section id="about" class="section">
+    <div class="section-inner about-section">
+        <div class="about-images">
+            <div class="about-image-main">
+                {% if profile.about_image_1 %}
+                    <img src="{{ profile.about_image_1.url }}" alt="{{ profile.name }} main image">
+                {% else %}
+                    <img src="{% static 'orgbot/images/about_1.png' %}" alt="Main office workspace">
+                {% endif %}
+            </div>
+            <div class="about-image-secondary">
+                {% if profile.about_image_2 %}
+                    <img src="{{ profile.about_image_2.url }}" alt="{{ profile.name }} team image">
+                {% else %}
+                    <img src="{% static 'orgbot/images/about_2.png' %}" alt="Team collaboration">
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="about-copy">
+            <span class="about-tagline">ABOUT THE ORGANIZATION</span>
+            <h2>The Story Behind Success</h2>
+            <p class="section-lead">
+                SPIHER, recognized as a Deemed-to-be University under Section 3 of the UGC Act, 1956, has been a beacon of academic excellence since 2008. Originally established in 1993 as St. Peter’s Engineering College, the institution has grown into one of India’s premier educational destinations, attracting students from across the nation.
+            </p>
+            <ul class="about-checklist">
+                <li>
+                    <span class="check-icon">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </span>
+                    <span>{% if profile.about_point_1 %}{{ profile.about_point_1 }}{% else %}Chunked and embedded into a persistent <strong>ChromaDB</strong> vector store.{% endif %}</span>
+                </li>
+                <li>
+                    <span class="check-icon">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </span>
+                    <span>{% if profile.about_point_2 %}{{ profile.about_point_2 }}{% else %}Mirrored into a readable <strong>page-index JSON</strong> file.{% endif %}</span>
+                </li>
+                <li>
+                    <span class="check-icon">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </span>
+                    <span>{% if profile.about_point_3 %}{{ profile.about_point_3 }}{% else %}Searchable by the AI agent — with URLs kept clickable in every answer.{% endif %}</span>
+                </li>
+            </ul>
+            <p class="about-footer-text">
+                Ask anything about {{ profile.name|default:"Redback AI" }} — services, contacts, addresses, policies — and get an answer sourced from your own data.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section id="gallery" class="section section-alt">
+    <div class="section-inner">
+        <h2>A Glimpse Into Our Organization</h2>
+        <div class="gallery-grid">
+            <div class="gallery-card">
+                {% if profile.gallery_image_1 %}
+                    <img src="{{ profile.gallery_image_1.url }}" alt="Gallery image 1">
+                {% else %}
+                    <img src="https://placehold.co/500x350/png?text=Our+Team" alt="Placeholder gallery image 1">
+                {% endif %}
+                <p>Our Team</p>
+            </div>
+            <div class="gallery-card">
+                {% if profile.gallery_image_2 %}
+                    <img src="{{ profile.gallery_image_2.url }}" alt="Gallery image 2">
+                {% else %}
+                    <img src="https://placehold.co/500x350/png?text=Our+Workspace" alt="Placeholder gallery image 2">
+                {% endif %}
+                <p>Our Workspace</p>
+            </div>
+            <div class="gallery-card">
+                <img src="https://placehold.co/500x350/png?text=Our+Impact" alt="Placeholder gallery image 3">
+                <p>Our Impact</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="chat" class="section chat-section">
+    <div class="section-inner chat-section-inner">
+        <div class="chat-header-center">
+            <span class="pill">✦ AI Knowledge Assistant</span>
+            <h2>Ask Our AI Assistant</h2>
+            <p class="section-lead">
+                Have a question about {{ profile.name|default:"us" }}? Our AI assistant answers directly
+                from our organization data in real time.
+            </p>
+        </div>
+
+        <div class="chat-widget" id="chat-widget">
+            <div class="chat-header">
+                <div class="chat-header-title">
+                    <span class="chat-avatar">🤖</span>
+                    <div>
+                        <div class="chat-header-name">{{ profile.name|default:"Organization" }} Assistant</div>
+                        <div class="chat-header-status"><span class="status-dot"></span> Online & Ready</div>
+                    </div>
+                </div>
+                <button type="button" class="chat-clear-btn" id="chat-clear-btn" title="Clear Chat History">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Clear Chat
+                </button>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-message bot">
+                    <div class="bubble">
+                        <div class="bubble-content">
+                            👋 Hi! I'm the AI assistant for <strong>{{ profile.name|default:"this organization" }}</strong>.
+                            Ask me anything about who we are, what we do, or how to reach us.
+                        </div>
+                        <div class="chat-model-footer">
+                            <div class="model-badge-chip">
+                                <span class="chip-sparkle">✨</span>
+                                <span class="chip-model">RAG Assistant</span>
+                                <span class="chip-divider">·</span>
+                                <span class="chip-method">Ready</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="chat-form" class="chat-input-row" autocomplete="off">
+                {% csrf_token %}
+                <div class="chat-input-wrapper">
+                    <input
+                        type="text"
+                        id="chat-input"
+                        placeholder="Ask anything about our organization..."
+                        maxlength="1000"
+                        required
+                    >
+                    <button type="submit" id="chat-send-btn" aria-label="Send message">
+                        <span>Send</span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="section-inner footer-inner">
+        <span>&copy; {% now "Y" %} {{ profile.name|default:"Your Organization" }}. All rights reserved.</span>
+        {% if profile.contact_email %}<a href="mailto:{{ profile.contact_email }}">{{ profile.contact_email }}</a>{% endif %}
+    </div>
+</footer>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    window.ORGBOT_CHAT_ENDPOINT = "{% url 'orgbot:chat_api' %}";
+</script>
+{% endblock %}

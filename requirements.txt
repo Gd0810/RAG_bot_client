@@ -1,0 +1,14 @@
+# Top-level requirements for the Organization RAG Chatbot project.
+# Only direct dependencies are pinned here - pip will resolve the full
+# dependency tree per-platform (Windows/macOS/Linux) automatically, which
+# correctly skips platform-specific transitive packages like uvloop
+# (Linux/macOS only, used internally by chromadb's optional server mode)
+# on Windows.
+#
+# Install with: pip install -r requirements.txt
+
+Django>=6.0,<7.0
+chromadb>=1.5,<2.0
+python-dotenv>=1.2,<2.0
+requests>=2.30,<3.0
+Pillow>=12.0,<13.0
