@@ -41,7 +41,6 @@ def process_document(document) -> int:
         chunks=vector_chunks,
         source_title=document.title,
         doc_id=document.id,
-        urls=urls,
     )
 
     # ---- 2) Page-index method: larger "pages" for fast, low-overhead lookup ----
@@ -52,7 +51,6 @@ def process_document(document) -> int:
         pages=page_chunks,
         source_title=document.title,
         doc_id=document.id,
-        urls=urls,
     )
 
     return n_chunks
@@ -61,3 +59,17 @@ def process_document(document) -> int:
 def remove_document(document):
     vector_store.delete_by_doc_id(document.id)
     page_index.delete_by_doc_id(document.id)
+
+
+def reprocess_all_documents():
+    """Clear and re-index all KnowledgeDocument instances cleanly."""
+    from ..models import KnowledgeDocument
+    docs = list(KnowledgeDocument.objects.all())
+    for d in docs:
+        remove_document(d)
+        n = process_document(d)
+        d.chunk_count = n
+        d.processed = True
+        d.processing_error = ""
+        d.save(update_fields=["chunk_count", "processed", "processing_error"])
+    return len(docs)

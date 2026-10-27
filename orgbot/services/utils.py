@@ -77,7 +77,12 @@ def _score_url(url: str, answer_tokens: set) -> int:
     return len(url_tokens & answer_tokens)
 
 
-def render_answer_html(text: str, extra_urls: list | None = None) -> str:
+def render_answer_html(
+    text: str,
+    extra_urls: list | None = None,
+    show_visitor_form: bool = False,
+    query: str = "",
+) -> str:
     escaped = html.escape(text)
     cited_urls = []   # URLs the LLM explicitly wrote in its answer text
 
@@ -98,6 +103,35 @@ def render_answer_html(text: str, extra_urls: list | None = None) -> str:
     bolded = BOLD_RE.sub(r"<strong>\1</strong>", linked)
     with_breaks = bolded.replace("\n", "<br>")
 
+    # If visitor form is required, append form directly and suppress extra URLs
+    if show_visitor_form:
+        escaped_query = html.escape(query)
+        form_html = (
+            f'<div class="visitor-request-card" style="margin-top: 14px; padding: 16px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: left;">'
+            f'<div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: #0f172a; display: flex; align-items: center; gap: 6px;">'
+            f'<span>📋</span> Web Visitor Request Form'
+            f'</div>'
+            f'<p style="font-size: 13px; color: #475569; margin-bottom: 12px; line-height: 1.4;">'
+            f'Please submit your details below. Our system will automatically categorize your question and route it to the respective department admin for an email response.'
+            f'</p>'
+            f'<form class="visitor-req-form" data-query="{escaped_query}" style="display: flex; flex-direction: column; gap: 10px;">'
+            f'<div>'
+            f'<label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Your Name</label>'
+            f'<input type="text" name="name" placeholder="Enter your name (e.g. Giri)" required style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; background: #ffffff; color: #0f172a; box-sizing: border-box;" />'
+            f'</div>'
+            f'<div>'
+            f'<label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Your Email</label>'
+            f'<input type="email" name="email" placeholder="Enter your email (e.g. giri123@gmail.com)" required style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; background: #ffffff; color: #0f172a; box-sizing: border-box;" />'
+            f'</div>'
+            f'<button type="submit" style="padding: 9px 16px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; align-self: flex-start;">'
+            f'Submit Request'
+            f'</button>'
+            f'</form>'
+            f'<div class="visitor-req-status" style="display: none; margin-top: 10px; padding: 10px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 6px; font-weight: 600; font-size: 13px; color: #15803d;"></div>'
+            f'</div>'
+        )
+        return with_breaks + form_html
+
     # --- Determine the best related links to show ---
     answer_tokens = _answer_tokens(text)
     related_urls = []
@@ -113,7 +147,6 @@ def render_answer_html(text: str, extra_urls: list | None = None) -> str:
         for u in extra_urls:
             if not u:
                 continue
-            # Handle comma-separated or space-separated URL strings
             parts = re.split(r"[,\s]+", str(u).strip())
             for single_u in parts:
                 single_u = single_u.strip().rstrip(".,;:!?)")
@@ -125,7 +158,6 @@ def render_answer_html(text: str, extra_urls: list | None = None) -> str:
                 if score > 0:
                     candidates.append((score, single_u))
 
-        # Sort by score descending, pick top candidates to fill up to MAX
         candidates.sort(key=lambda x: -x[0])
         remaining_slots = MAX_RELATED_LINKS - len(related_urls)
         for score, u in candidates[:remaining_slots]:
@@ -167,3 +199,4 @@ def render_answer_html(text: str, extra_urls: list | None = None) -> str:
         with_breaks += related_section
 
     return with_breaks
+

@@ -1,0 +1,159 @@
+{% extends "orgbot/department/base_dashboard.html" %}
+
+{% block title %}Forwarded Requests - {{ department.department_name }} Department{% endblock %}
+{% block page_title %}Incoming Forwarded Requests{% endblock %}
+
+{% block dashboard_content %}
+<style>
+    /* Scoped to this page, reuses --db- tokens defined in base_dashboard.html */
+    .fq-card-head { margin-bottom: 20px; }
+    .fq-card-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--db-text-900);
+        margin-bottom: 5px;
+    }
+    .fq-card-sub {
+        font-size: 13px;
+        color: var(--db-text-600);
+        line-height: 1.5;
+    }
+    .fq-card-sub strong { color: var(--db-text-900); }
+
+    .fq-table-wrap { overflow-x: auto; }
+    .fq-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+    .fq-table thead tr { border-bottom: 1px solid var(--db-border); }
+    .fq-table th {
+        padding: 0 12px 12px;
+        color: var(--db-text-400);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .fq-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #f2f3f8;
+        color: var(--db-text-600);
+        vertical-align: middle;
+    }
+    .fq-table tbody tr:last-child td { border-bottom: none; }
+    .fq-table tbody tr { transition: background 0.14s ease; }
+    .fq-table tbody tr:hover { background: #fafbfe; }
+
+    .fq-origin-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: var(--db-info-bg);
+        color: var(--db-info);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .fq-origin-badge svg { width: 11px; height: 11px; }
+
+    .fq-visitor { display: flex; align-items: center; gap: 10px; }
+    .fq-visitor-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--db-accent-500), var(--db-sky-400));
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .fq-visitor-name { font-weight: 600; color: var(--db-text-900); }
+
+    .fq-query-cell {
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .fq-date-cell { color: var(--db-text-400); font-size: 12.5px; white-space: nowrap; }
+
+    .fq-accept-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        padding: 6px 14px;
+        white-space: nowrap;
+    }
+    .fq-accept-btn svg { width: 13px; height: 13px; }
+
+    .fq-empty { text-align: center; padding: 48px 0 36px; color: var(--db-text-400); }
+    .fq-empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.5; }
+    .fq-empty p { font-size: 14px; font-weight: 500; }
+</style>
+
+<div class="card">
+    <div class="fq-card-head">
+        <div class="fq-card-title">Forwarded to {{ department.department_name }} Department</div>
+        <p class="fq-card-sub">
+            Requests transferred from other departments. Click <strong>Accept</strong> to move a request into your active <em>Requests</em> list.
+        </p>
+    </div>
+
+    {% if forwarded_requests %}
+        <div class="fq-table-wrap">
+            <table class="fq-table">
+                <thead>
+                    <tr>
+                        <th>Original Dept</th>
+                        <th>Visitor</th>
+                        <th>Email</th>
+                        <th>Request Query</th>
+                        <th>Date</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in forwarded_requests %}
+                        <tr>
+                            <td>
+                                <span class="fq-origin-badge">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8l5 4-5 4"/><path d="M4 6v4a4 4 0 0 0 4 4h12"/></svg>
+                                    {{ req.assigned_department.department_name }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fq-visitor">
+                                    <div class="fq-visitor-avatar">{{ req.visitor_name|slice:":2"|upper }}</div>
+                                    <span class="fq-visitor-name">{{ req.visitor_name }}</span>
+                                </div>
+                            </td>
+                            <td style="color: var(--db-accent-500);">{{ req.visitor_email }}</td>
+                            <td class="fq-query-cell">{{ req.request_query }}</td>
+                            <td class="fq-date-cell">{{ req.created_at|date:"d/m/Y - g:ia" }}</td>
+                            <td style="text-align: right;">
+                                <form method="post" action="{% url 'orgbot:dept_accept_forwarded_request' req.pk %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success fq-accept-btn">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                        Accept Request
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="fq-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            <p>No incoming forwarded requests right now.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

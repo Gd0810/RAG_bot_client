@@ -36,14 +36,20 @@ def _build_system_prompt(profile) -> str:
     elif website_url:
         fallback_links.append(f"visit our website at {website_url}")
 
-    if fallback_links:
-        fallback_line = (
-            "If the context does NOT contain enough information to answer, say so honestly and suggest the "
+    if profile.dashboard_mode:
+        fallback_rule = (
+            "- If the context does NOT contain enough information to answer the user's question, "
+            "your response MUST begin with '[NO_DB_INFO]' so the system can prompt the user to "
+            "route their inquiry to the relevant department."
+        )
+    elif fallback_links:
+        fallback_rule = (
+            "- If the context does NOT contain enough information to answer, say so honestly and suggest the "
             "user " + " or ".join(fallback_links) + "."
         )
     else:
-        fallback_line = (
-            "If the context does NOT contain enough information to answer, say so honestly and suggest the "
+        fallback_rule = (
+            "- If the context does NOT contain enough information to answer, say so honestly and suggest the "
             "user rephrase their question or contact the organization directly."
         )
 
@@ -56,15 +62,15 @@ Rules:
 - If the context includes any URL(s) relevant to the answer (e.g. a contact page, a service page),
   include that exact URL in your answer, written out in full.
   Never invent or alter a URL - only use URLs that literally appear in the context.
-- {fallback_line}
+{fallback_rule}
 - Do not mention "context", "chunks", "documents", or your internal retrieval process to the user.
 - Keep answers focused - a few sentences, or a short list when helpful.
 """
 
 
 def _build_prompt(query: str, context_blocks: list) -> str:
-    MAX_CONTEXT_CHARS = 25000
-    MAX_BLOCK_CHARS = 12000
+    MAX_CONTEXT_CHARS = 3500
+    MAX_BLOCK_CHARS = 1600
 
     normalized_blocks = []
     for block in context_blocks:
@@ -111,12 +117,15 @@ def _try_vector_method(query: str):
         if dist > settings.VECTOR_DISTANCE_THRESHOLD:
             continue
         source_title = meta.get("source_title", "organization data")
-        urls = meta.get("urls", "")
-        if urls:
-            extracted_urls.append(urls)
+        raw_urls = meta.get("urls", "")
+        if raw_urls:
+            for u in raw_urls.split(", "):
+                u_clean = u.strip()
+                if u_clean and u_clean not in extracted_urls:
+                    extracted_urls.append(u_clean)
         block = f"[Source: {source_title}]\n{doc}"
-        if urls:
-            block += f"\n(Related links: {urls})"
+        if raw_urls:
+            block += f"\n(Related links: {raw_urls})"
         context_blocks.append(block)
         sources.append(source_title)
 
@@ -185,41 +194,122 @@ def answer_question(query: str) -> dict:
         }
 
     method_used = "none"
+    sources = []
     urls_found = []
-    context_blocks, sources, urls_found = _try_vector_method(query)
+    context_blocks = []
 
-    if context_blocks:
+    # 1. Semantic vector search (dense embeddings)
+    vector_blocks, vector_sources, vector_urls = _try_vector_method(query)
+    if vector_blocks:
+        context_blocks.extend(vector_blocks)
+        sources.extend(vector_sources or [])
+        urls_found.extend(vector_urls or [])
         method_used = "vector"
-    else:
-        context_blocks, sources, urls_found = _try_page_index_method(query)
-        if context_blocks:
+
+    # 2. Keyword page index search (sparse exact matching)
+    page_blocks, page_sources, page_urls = _try_page_index_method(query)
+    if page_blocks:
+        for pb in page_blocks:
+            snippet = pb[:80]
+            if not any(snippet in cb for cb in context_blocks):
+                context_blocks.append(pb)
+        sources.extend(page_sources or [])
+        urls_found.extend(page_urls or [])
+        if method_used == "none":
             method_used = "page_index"
         else:
-            context_blocks = []
-            sources = []
-            urls_found = []
+            method_used = "hybrid"
+
+    sources = list(dict.fromkeys(sources))
+    urls_found = list(dict.fromkeys(urls_found))
+
+    # If dashboard_mode is enabled and no relevant context was found in DB
+    if profile.dashboard_mode and method_used == "none":
+        return {
+            "answer": (
+                "The relevant data you asked about is not in my Database. "
+                "Please share your details in the form below so that the particular "
+                "department admin can respond shortly via your email."
+            ),
+            "method": "none",
+            "sources": [],
+            "urls": [],
+            "model_used": "Department Router",
+            "show_visitor_form": True,
+            "query": query,
+        }
 
     prompt = _build_prompt(query, context_blocks)
 
     try:
         result = llm_client.generate_answer(_build_system_prompt(profile), prompt)
+        raw_answer = result["answer"]
+
+        show_visitor_form = False
+        final_answer = raw_answer
+
+        if profile.dashboard_mode:
+            answer_lower = raw_answer.lower()
+            missing_indicators = [
+                "[no_db_info]",
+                "not enough information in my database",
+                "not in my database",
+                "not enough information to answer",
+                "do not have enough information to answer",
+                "don't have enough information to answer",
+                "not have sufficient information to answer",
+                "i do not have information to answer",
+                "i don't have information to answer",
+                "not available in the provided context",
+                "no information found in the database",
+                "no information in the database",
+                "context does not contain",
+                "context doesn't contain",
+                "not related to the provided context",
+                "doesn't seem to be related",
+                "does not seem to be related",
+                "cannot answer based on the provided context",
+                "unable to answer based on the provided context",
+            ]
+            if any(indicator in answer_lower for indicator in missing_indicators):
+                show_visitor_form = True
+                final_answer = (
+                    "The relevant data you asked about is not in my Database. "
+                    "Please share your details in the form below so that the particular "
+                    "department admin can respond shortly via your email."
+                )
+
         return {
-            "answer": result["answer"],
+            "answer": final_answer,
             "method": method_used,
             "sources": sources,
             "urls": urls_found or [],
             "model_used": result["model_used"],
+            "show_visitor_form": show_visitor_form,
+            "query": query,
         }
     except llm_client.LLMError as e:
         logger.error("LLM generation failed entirely: %s", e)
-        return {
-            "answer": (
+        show_visitor_form = profile.dashboard_mode
+        fallback_msg = (
+            "The relevant data you asked about is not in my Database. "
+            "Please share your details in the form below so that the particular "
+            "department admin can respond shortly via your email."
+            if profile.dashboard_mode
+            else (
                 "Sorry, I'm having trouble reaching the AI service right now "
                 "(please check the NVIDIA_API_KEY / model settings in your .env file). "
                 f"Details: {e}"
-            ),
+            )
+        )
+        return {
+            "answer": fallback_msg,
             "method": method_used,
             "sources": sources,
             "urls": urls_found or [],
             "model_used": None,
+            "show_visitor_form": show_visitor_form,
+            "query": query,
         }
+
+

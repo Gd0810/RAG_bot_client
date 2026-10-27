@@ -1,0 +1,193 @@
+{% extends "orgbot/department/base_dashboard.html" %}
+
+{% block title %}Requests - {{ department.department_name }} Department{% endblock %}
+{% block page_title %}{{ department.department_name }} Department Requests{% endblock %}
+
+{% block dashboard_content %}
+<style>
+    /* Scoped to this page, reuses --db- tokens defined in base_dashboard.html */
+    .rq-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .rq-card-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--db-text-900);
+        margin: 0;
+    }
+    .rq-card-title span {
+        display: block;
+        font-family: 'Inter', sans-serif;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--db-text-400);
+        margin-top: 2px;
+    }
+
+    .rq-filters {
+        display: flex;
+        gap: 4px;
+        background: #f1f2f8;
+        padding: 4px;
+        border-radius: 10px;
+    }
+    .rq-filter {
+        padding: 7px 14px;
+        border-radius: 7px;
+        font-size: 12.5px;
+        font-weight: 600;
+        text-decoration: none;
+        color: var(--db-text-600);
+        transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .rq-filter:hover { color: var(--db-text-900); }
+    .rq-filter.active {
+        background: var(--db-card);
+        color: var(--db-accent-600);
+        box-shadow: var(--db-shadow-sm);
+    }
+
+    .rq-table-wrap { overflow-x: auto; }
+    .rq-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+    .rq-table thead tr { border-bottom: 1px solid var(--db-border); }
+    .rq-table th {
+        padding: 0 12px 12px;
+        color: var(--db-text-400);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .rq-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #f2f3f8;
+        color: var(--db-text-600);
+        vertical-align: middle;
+    }
+    .rq-table tbody tr:last-child td { border-bottom: none; }
+    .rq-table tbody tr { transition: background 0.14s ease; }
+    .rq-table tbody tr:hover { background: #fafbfe; }
+
+    .rq-id {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 700;
+        color: var(--db-text-400);
+        font-size: 12.5px;
+    }
+
+    .rq-visitor { display: flex; align-items: center; gap: 10px; }
+    .rq-visitor-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--db-accent-500), var(--db-sky-400));
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .rq-visitor-name { font-weight: 600; color: var(--db-text-900); }
+
+    .rq-query-cell {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .rq-date-cell { color: var(--db-text-400); font-size: 12.5px; white-space: nowrap; }
+
+    .rq-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .rq-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .rq-badge-pending { background: var(--db-warning-bg); color: var(--db-warning); }
+    .rq-badge-cleared { background: var(--db-success-bg); color: var(--db-success); }
+
+    .rq-btn-action { font-size: 12px; padding: 6px 12px; white-space: nowrap; }
+
+    .rq-empty { text-align: center; padding: 48px 0 36px; color: var(--db-text-400); }
+    .rq-empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.5; }
+    .rq-empty p { font-size: 14px; font-weight: 500; }
+</style>
+
+<div class="card">
+    <div class="rq-card-head">
+        <div class="rq-card-title">
+            Request Directory
+            <span>All requests routed to your department</span>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="rq-filters">
+            <a href="{% url 'orgbot:dept_requests' %}" class="rq-filter {% if status_filter == 'all' %}active{% endif %}">All</a>
+            <a href="{% url 'orgbot:dept_requests' %}?status=pending" class="rq-filter {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+            <a href="{% url 'orgbot:dept_requests' %}?status=cleared" class="rq-filter {% if status_filter == 'cleared' %}active{% endif %}">Cleared</a>
+        </div>
+    </div>
+
+    {% if requests %}
+        <div class="rq-table-wrap">
+            <table class="rq-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Visitor</th>
+                        <th>Email</th>
+                        <th>Request Query</th>
+                        <th>Date / Time</th>
+                        <th>Status</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                        <tr>
+                            <td class="rq-id">#{{ req.pk }}</td>
+                            <td>
+                                <div class="rq-visitor">
+                                    <div class="rq-visitor-avatar">{{ req.visitor_name|slice:":2"|upper }}</div>
+                                    <span class="rq-visitor-name">{{ req.visitor_name }}</span>
+                                </div>
+                            </td>
+                            <td style="color: var(--db-accent-500);">{{ req.visitor_email }}</td>
+                            <td class="rq-query-cell">{{ req.request_query }}</td>
+                            <td class="rq-date-cell">{{ req.created_at|date:"d/m/Y - g:ia" }}</td>
+                            <td>
+                                {% if req.status == 'pending' %}
+                                    <span class="rq-badge rq-badge-pending">Pending</span>
+                                {% elif req.status == 'cleared' %}
+                                    <span class="rq-badge rq-badge-cleared">Cleared</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <a href="{% url 'orgbot:dept_request_detail' req.pk %}" class="btn btn-primary rq-btn-action">Respond / Manage →</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="rq-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H7l-3 3V4z"/></svg>
+            <p>No requests found in this view.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

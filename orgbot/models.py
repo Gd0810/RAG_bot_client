@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
 
 
 class OrganizationProfile(models.Model):
@@ -84,6 +85,11 @@ class OrganizationProfile(models.Model):
         ],
         help_text="Pick a light color theme for the site (no dark themes).",
     )
+    dashboard_mode = models.BooleanField(
+        default=False,
+        verbose_name="Dashboard Mode",
+        help_text="When TRUE (ON), unresolved bot queries will prompt visitors for their details to route to department admins.",
+    )
 
     class Meta:
         verbose_name = "Organization Profile"
@@ -141,3 +147,57 @@ class KnowledgeDocument(models.Model):
     def __str__(self):
         status = "processed" if self.processed else "pending"
         return f"{self.title} ({self.file_type}, {status})"
+
+
+class Department(models.Model):
+    """
+    College / Organization department created by superadmin.
+    Associated with a Django User for login into the Department Dashboard.
+    """
+    department_name = models.CharField(max_length=100, unique=True)
+    department_email = models.EmailField()
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="department_profile", null=True, blank=True
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["department_name"]
+
+    def __str__(self):
+        return self.department_name
+
+
+class VisitorRequest(models.Model):
+    """
+    Visitor query request recorded when RAG bot cannot find data in DB
+    and dashboard_mode is TRUE.
+    """
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("cleared", "Cleared"),
+        ("forwarded", "Forwarded"),
+        ("deleted", "Deleted"),
+    ]
+
+    request_query = models.TextField()
+    visitor_name = models.CharField(max_length=150)
+    visitor_email = models.EmailField()
+    assigned_department = models.ForeignKey(
+        Department, on_delete=models.CASCADE, related_name="assigned_requests"
+    )
+    forwarded_to_department = models.ForeignKey(
+        Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="forwarded_requests"
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    reply_message = models.TextField(blank=True)
+    replied_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.visitor_name} ({self.assigned_department.department_name}): {self.request_query[:40]}"
+

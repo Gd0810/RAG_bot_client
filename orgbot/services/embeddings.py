@@ -62,8 +62,12 @@ class HashingEmbeddingFunction(EmbeddingFunction):
 _embedding_function_singleton = None
 
 
-def get_embedding_function() -> HashingEmbeddingFunction:
+def get_embedding_function():
     global _embedding_function_singleton
     if _embedding_function_singleton is None:
-        _embedding_function_singleton = HashingEmbeddingFunction()
+        try:
+            from chromadb.utils import embedding_functions
+            _embedding_function_singleton = embedding_functions.DefaultEmbeddingFunction()
+        except Exception:
+            _embedding_function_singleton = HashingEmbeddingFunction()
     return _embedding_function_singleton

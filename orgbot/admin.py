@@ -1,15 +1,18 @@
+from django import forms
 from django.contrib import admin, messages
+from django.contrib.auth.models import User
+from django.utils.text import slugify
 
-from .models import OrganizationProfile, KnowledgeDocument
+from .models import OrganizationProfile, KnowledgeDocument, Department, VisitorRequest
 from .services import ingestion
 
 
 @admin.register(OrganizationProfile)
 class OrganizationProfileAdmin(admin.ModelAdmin):
-    list_display = ("name", "tagline", "theme_color")
+    list_display = ("name", "tagline", "theme_color", "dashboard_mode")
 
     fieldsets = (
-        ("Basic Info", {"fields": ("name", "tagline", "about")}),
+        ("Basic Info & Modes", {"fields": ("name", "tagline", "about", "dashboard_mode")}),
         ("About Highlights", {
             "fields": (
                 "about_point_1",
@@ -39,6 +42,62 @@ class OrganizationProfileAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+class DepartmentForm(forms.ModelForm):
+    password = forms.CharField(
+        widget=forms.PasswordInput(render_value=True),
+        required=False,
+        help_text="Set or update password for department dashboard login.",
+    )
+
+    class Meta:
+        model = Department
+        fields = ["department_name", "department_email", "password", "is_active"]
+
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    form = DepartmentForm
+    list_display = ("department_name", "department_email", "user", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("department_name", "department_email")
+
+    def save_model(self, request, obj, form, change):
+        raw_password = form.cleaned_data.get("password")
+        dept_name = form.cleaned_data.get("department_name", "")
+        dept_email = form.cleaned_data.get("department_email", "")
+
+        # Generate unique username for the department admin
+        username = slugify(dept_name).replace("-", "_")
+        if not username:
+            username = "dept_admin"
+        
+        # Link or create Django User
+        user = obj.user
+        if not user:
+            user, created = User.objects.get_or_create(username=username, defaults={"email": dept_email})
+            if not created and user.department_profile and user.department_profile != obj:
+                username = f"{username}_{Department.objects.count() + 1}"
+                user = User.objects.create(username=username, email=dept_email)
+        
+        user.username = username
+        user.email = dept_email
+        user.is_staff = True  # Allows login access
+        if raw_password:
+            user.set_password(raw_password)
+        user.save()
+
+        obj.user = user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(VisitorRequest)
+class VisitorRequestAdmin(admin.ModelAdmin):
+    list_display = ("visitor_name", "visitor_email", "assigned_department", "forwarded_to_department", "status", "created_at")
+    list_filter = ("status", "assigned_department", "forwarded_to_department")
+    search_fields = ("visitor_name", "visitor_email", "request_query")
+    readonly_fields = ("created_at", "replied_at")
 
 
 @admin.register(KnowledgeDocument)
@@ -82,3 +141,4 @@ class KnowledgeDocumentAdmin(admin.ModelAdmin):
         for obj in queryset:
             ingestion.remove_document(obj)
         super().delete_queryset(request, queryset)
+

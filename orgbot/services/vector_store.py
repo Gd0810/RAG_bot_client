@@ -33,6 +33,17 @@ def get_collection():
     return _collection
 
 
+def reset_collection():
+    global _collection
+    client = get_client()
+    try:
+        client.delete_collection(settings.CHROMA_COLLECTION_NAME)
+    except Exception:
+        pass
+    _collection = None
+    return get_collection()
+
+
 def _get_max_batch_size() -> int:
     """
     Chroma's local backend caps how many records can go into a single
@@ -45,6 +56,15 @@ def _get_max_batch_size() -> int:
         return max(int(client.get_max_batch_size()), 1)
     except Exception:
         return 4000  # conservative fallback if the API isn't available
+
+
+import re
+
+URL_RE = re.compile(r"https?://[^\s\"'<>\)\]]+")
+
+
+def _extract_chunk_urls(text: str) -> List[str]:
+    return list(dict.fromkeys(URL_RE.findall(text)))
 
 
 def add_chunks(chunks: List[str], source_title: str, doc_id: int, urls: List[str] = None):
@@ -63,14 +83,14 @@ def add_chunks(chunks: List[str], source_title: str, doc_id: int, urls: List[str
     for start in range(0, len(chunks), max_batch):
         batch = chunks[start:start + max_batch]
         ids = [f"doc{doc_id}-{uuid.uuid4().hex[:10]}" for _ in batch]
-        metadatas = [
-            {
+        metadatas = []
+        for chunk in batch:
+            chunk_urls = _extract_chunk_urls(chunk)
+            metadatas.append({
                 "source_title": source_title,
                 "doc_id": doc_id,
-                "urls": ", ".join(urls or []),
-            }
-            for _ in batch
-        ]
+                "urls": ", ".join(chunk_urls[:4]),
+            })
         collection.add(documents=batch, ids=ids, metadatas=metadatas)
         total_added += len(batch)
 

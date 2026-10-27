@@ -1,0 +1,20 @@
+alumni_relations_advancement
+athletics_department
+campus_it_technology
+facilities_grounds_management
+finance
+general
+registrar_office
+
+
+
+
+
+find@2000
+
+
+
+Admin : 
+
+user name : admin 
+password : 1234

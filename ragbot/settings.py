@@ -127,8 +127,13 @@ def _get_nvidia_model(env_name: str, default: str) -> str:
     value = os.environ.get(env_name, "").strip()
     if value:
         # Avoid known end-of-life model IDs from older project defaults.
-        if value == "mistralai/mixtral-8x7b-instruct-v0.1":
-            return "meta/llama-3.1-8b-instruct"
+        if value in (
+            "mistralai/mixtral-8x7b-instruct-v0.1",
+            "meta/llama-3.1-8b-instruct",
+            "meta/llama-3.1-70b-instruct",
+            "meta/llama-3.3-70b-instruct",
+        ):
+            return "meta/llama-3.2-11b-vision-instruct"
         return value
     return default
 
@@ -149,19 +154,34 @@ NVIDIA_API_KEY_FALLBACK = os.environ.get(
 NVIDIA_API_KEY = NVIDIA_API_KEY_PRIMARY
 
 NVIDIA_MODEL_PRIMARY = _get_nvidia_model(
-    "NVIDIA_MODEL_PRIMARY", "nvidia/llama-3.1-nemotron-70b-instruct"
+    "NVIDIA_MODEL_PRIMARY", "nvidia/nemotron-3.5-bolt-e4b"
 )
 NVIDIA_MODEL_FALLBACK = _get_nvidia_model(
-    "NVIDIA_MODEL_FALLBACK", "meta/llama-3.1-8b-instruct"
+    "NVIDIA_MODEL_FALLBACK", "meta/llama-3.2-11b-vision-instruct"
 )
-NVIDIA_REQUEST_TIMEOUT = int(os.environ.get("NVIDIA_REQUEST_TIMEOUT", "30"))
+NVIDIA_REQUEST_TIMEOUT = int(os.environ.get("NVIDIA_REQUEST_TIMEOUT", "45"))
+
 
 # -----------------------------------------------------------------------
 # RAG tuning
 # -----------------------------------------------------------------------
-VECTOR_TOP_K = int(os.environ.get("VECTOR_TOP_K", "4"))
+VECTOR_TOP_K = int(os.environ.get("VECTOR_TOP_K", "5"))
 # Chroma returns a "distance" (lower = more similar) for the hashing embedding.
 # If the best distance is above this threshold, we treat the vector store as
-# having "no relevant answer" and fall back to the page-index method.
 VECTOR_DISTANCE_THRESHOLD = float(os.environ.get("VECTOR_DISTANCE_THRESHOLD", "0.90"))
-PAGE_INDEX_TOP_K = int(os.environ.get("PAGE_INDEX_TOP_K", "3"))
+PAGE_INDEX_TOP_K = int(os.environ.get("PAGE_INDEX_TOP_K", "4"))
+
+# -----------------------------------------------------------------------
+# Email & Auth Configuration
+# -----------------------------------------------------------------------
+LOGIN_URL = "/department/login/"
+LOGIN_REDIRECT_URL = "/department/dashboard/"
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "").strip()
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "").strip()
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@spiher.ac.in").strip()
+

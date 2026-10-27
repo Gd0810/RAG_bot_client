@@ -1,0 +1,237 @@
+{% extends "orgbot/base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Scoped to this page with an li- prefix, self-contained (this template extends the
+       general site base, not the dashboard shell, so it doesn't rely on --db- tokens) */
+    :root {
+        --li-ink-900: #0a0f1f;
+        --li-accent-500: #4f46e5;
+        --li-accent-600: #4338ca;
+        --li-sky-400: #38bdf8;
+        --li-accent-glow: rgba(79, 70, 229, 0.35);
+        --li-border: #e5e7f0;
+        --li-text-900: #0f1424;
+        --li-text-600: #5b6478;
+        --li-text-400: #9aa2b8;
+    }
+
+    .li-shell {
+        min-height: 88vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 15% 20%, rgba(79, 70, 229, 0.10), transparent 40%),
+            radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.10), transparent 40%),
+            linear-gradient(135deg, #f7f8fc 0%, #eef0f8 100%);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .li-shell::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(15, 20, 36, 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 20, 36, 0.025) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: radial-gradient(ellipse 60% 60% at 50% 40%, black, transparent 75%);
+        pointer-events: none;
+    }
+
+    .li-card {
+        position: relative;
+        width: 100%;
+        max-width: 408px;
+        background: #ffffff;
+        padding: 36px 34px 30px;
+        border-radius: 18px;
+        border: 1px solid var(--li-border);
+        box-shadow: 0 20px 45px -12px rgba(15, 20, 36, 0.14), 0 4px 12px rgba(15, 20, 36, 0.04);
+    }
+
+    .li-icon {
+        width: 52px;
+        height: 52px;
+        margin: 0 auto 18px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--li-accent-500), var(--li-accent-600));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 20px var(--li-accent-glow);
+    }
+    .li-icon svg { width: 26px; height: 26px; }
+
+    .li-header { text-align: center; margin-bottom: 26px; }
+    .li-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 21px;
+        font-weight: 700;
+        color: var(--li-text-900);
+        letter-spacing: -0.01em;
+        margin: 0 0 6px 0;
+    }
+    .li-subtitle { font-size: 13.5px; color: var(--li-text-600); margin: 0; }
+
+    .li-alert {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 14px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-bottom: 16px;
+    }
+    .li-alert svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .li-alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .li-alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+    .li-form { display: flex; flex-direction: column; gap: 17px; }
+    .li-field { display: flex; flex-direction: column; }
+    .li-label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--li-text-600);
+        margin-bottom: 7px;
+        letter-spacing: 0.01em;
+    }
+    .li-input-wrap { position: relative; }
+    .li-input-wrap svg {
+        position: absolute;
+        left: 13px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        color: var(--li-text-400);
+        pointer-events: none;
+        transition: color 0.15s ease;
+    }
+    .li-input {
+        width: 100%;
+        padding: 11px 14px 11px 38px;
+        border-radius: 9px;
+        border: 1px solid #d7dae5;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        color: var(--li-text-900);
+        box-sizing: border-box;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .li-input::placeholder { color: var(--li-text-400); }
+    .li-input:focus {
+        outline: none;
+        border-color: var(--li-accent-500);
+        box-shadow: 0 0 0 3.5px var(--li-accent-glow);
+    }
+    .li-input:focus + svg,
+    .li-input-wrap:focus-within svg { color: var(--li-accent-500); }
+
+    .li-submit {
+        margin-top: 3px;
+        padding: 12px;
+        background: linear-gradient(135deg, var(--li-accent-500), var(--li-accent-600));
+        color: #ffffff;
+        border: none;
+        border-radius: 9px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 6px 16px var(--li-accent-glow);
+        transition: filter 0.15s ease, transform 0.12s ease;
+    }
+    .li-submit svg { width: 16px; height: 16px; }
+    .li-submit:hover { filter: brightness(1.07); }
+    .li-submit:active { transform: translateY(1px); }
+
+    .li-footer {
+        text-align: center;
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--li-border);
+        font-size: 13px;
+        color: var(--li-text-400);
+    }
+    .li-footer a {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--li-text-600);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.15s ease;
+    }
+    .li-footer a svg { width: 13px; height: 13px; }
+    .li-footer a:hover { color: var(--li-accent-600); }
+</style>
+
+<div class="li-shell">
+    <div class="li-card">
+        <div class="li-header">
+            <div class="li-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 3L2 8l10 5 8-4.1V15h2V8L12 3z" fill="#ffffff"/>
+                    <path d="M6 12.2V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8l-6 3-6-3z" fill="#ffffff" fill-opacity="0.85"/>
+                </svg>
+            </div>
+            <h2 class="li-title">Department Admin Login</h2>
+            <p class="li-subtitle">Access your department request portal</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="li-alert {% if message.tags == 'error' %}li-alert-error{% else %}li-alert-success{% endif %}">
+                    {% if message.tags == 'error' %}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+                    {% else %}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    {% endif %}
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" autocomplete="off" class="li-form">
+            {% csrf_token %}
+            <div class="li-field">
+                <label class="li-label">Department Username</label>
+                <div class="li-input-wrap">
+                    <input type="text" name="username" required placeholder="e.g. library" class="li-input" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+            </div>
+
+            <div class="li-field">
+                <label class="li-label">Password</label>
+                <div class="li-input-wrap">
+                    <input type="password" name="password" required placeholder="••••••••" class="li-input" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                </div>
+            </div>
+
+            <button type="submit" class="li-submit">
+                Sign In to Dashboard
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+            </button>
+        </form>
+
+        <div class="li-footer">
+            <a href="{% url 'orgbot:landing' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Back to Main Site
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,282 @@
+{% extends "orgbot/department/base_dashboard.html" %}
+
+{% block title %}Analytics - {{ department.department_name }} Department{% endblock %}
+{% block page_title %}Department Analytics Overview{% endblock %}
+
+{% block dashboard_content %}
+<style>
+    /* Scoped to this page, reuses --db- tokens defined in base_dashboard.html */
+    .an-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 18px;
+        margin-bottom: 28px;
+    }
+    .an-stat-card {
+        position: relative;
+        background: var(--db-card);
+        border: 1px solid var(--db-border);
+        border-radius: var(--db-radius);
+        box-shadow: var(--db-shadow-sm);
+        padding: 20px 22px;
+        overflow: hidden;
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+    .an-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--db-shadow-md);
+    }
+    .an-stat-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--an-accent, var(--db-accent-500));
+    }
+    .an-stat-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--an-accent-soft, rgba(79, 70, 229, 0.1));
+        color: var(--an-accent, var(--db-accent-500));
+        margin-bottom: 14px;
+    }
+    .an-stat-icon svg { width: 17px; height: 17px; }
+    .an-stat-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--db-text-400);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 6px;
+    }
+    .an-stat-value {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--db-text-900);
+        line-height: 1.1;
+    }
+    .an-stat-sub {
+        font-size: 12px;
+        color: var(--db-text-400);
+        margin-top: 6px;
+    }
+
+    .an-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+    }
+    .an-card-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--db-text-900);
+    }
+    .an-card-title span {
+        display: block;
+        font-family: 'Inter', sans-serif;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--db-text-400);
+        margin-top: 2px;
+    }
+
+    .an-table-wrap { overflow-x: auto; }
+    .an-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+    .an-table thead tr {
+        border-bottom: 1px solid var(--db-border);
+    }
+    .an-table th {
+        padding: 0 12px 12px;
+        color: var(--db-text-400);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .an-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #f2f3f8;
+        color: var(--db-text-600);
+        vertical-align: middle;
+    }
+    .an-table tbody tr:last-child td { border-bottom: none; }
+    .an-table tbody tr { transition: background 0.14s ease; }
+    .an-table tbody tr:hover { background: #fafbfe; }
+
+    .an-visitor { display: flex; align-items: center; gap: 10px; }
+    .an-visitor-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--db-accent-500), var(--db-sky-400));
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .an-visitor-name { font-weight: 600; color: var(--db-text-900); }
+
+    .an-query-cell {
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .an-date-cell { color: var(--db-text-400); font-size: 12.5px; white-space: nowrap; }
+
+    .an-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .an-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .an-badge-pending { background: var(--db-warning-bg); color: var(--db-warning); }
+    .an-badge-cleared { background: var(--db-success-bg); color: var(--db-success); }
+    .an-badge-forwarded { background: #f3e8ff; color: #7c3aed; }
+
+    .an-btn-view {
+        font-size: 12px;
+        padding: 6px 12px;
+        white-space: nowrap;
+    }
+
+    .an-empty {
+        text-align: center;
+        padding: 48px 0 36px;
+        color: var(--db-text-400);
+    }
+    .an-empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.5; }
+    .an-empty p { font-size: 14px; }
+</style>
+
+<!-- Analytics Summary Grid -->
+<div class="an-stat-grid">
+
+    <!-- Total Received -->
+    <div class="an-stat-card" style="--an-accent:#4338ca; --an-accent-soft:rgba(67,56,202,0.1);">
+        <div class="an-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H7l-3 3V4z"/></svg>
+        </div>
+        <div class="an-stat-label">Total Requests Received</div>
+        <div class="an-stat-value">{{ total_received }}</div>
+        <div class="an-stat-sub">Assigned to {{ department.department_name }}</div>
+    </div>
+
+    <!-- Pending -->
+    <div class="an-stat-card" style="--an-accent:#d97706; --an-accent-soft:rgba(217,119,6,0.1);">
+        <div class="an-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        </div>
+        <div class="an-stat-label">Pending Requests</div>
+        <div class="an-stat-value">{{ pending_count }}</div>
+        <div class="an-stat-sub">Awaiting response</div>
+    </div>
+
+    <!-- Cleared -->
+    <div class="an-stat-card" style="--an-accent:#059669; --an-accent-soft:rgba(5,150,105,0.1);">
+        <div class="an-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <div class="an-stat-label">Cleared Requests</div>
+        <div class="an-stat-value">{{ cleared_count }}</div>
+        <div class="an-stat-sub">Responded via email</div>
+    </div>
+
+    <!-- Forwarded Out -->
+    <div class="an-stat-card" style="--an-accent:#7c3aed; --an-accent-soft:rgba(124,58,237,0.1);">
+        <div class="an-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8l5 4-5 4"/><path d="M4 6v4a4 4 0 0 0 4 4h12"/></svg>
+        </div>
+        <div class="an-stat-label">Forwarded Out</div>
+        <div class="an-stat-value">{{ forwarded_out_count }}</div>
+        <div class="an-stat-sub">Sent to other departments</div>
+    </div>
+
+    <!-- Deleted -->
+    <div class="an-stat-card" style="--an-accent:#dc2626; --an-accent-soft:rgba(220,38,38,0.1);">
+        <div class="an-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </div>
+        <div class="an-stat-label">Deleted Requests</div>
+        <div class="an-stat-value">{{ deleted_count }}</div>
+        <div class="an-stat-sub">Removed requests</div>
+    </div>
+</div>
+
+<!-- Recent Activity Table -->
+<div class="card">
+    <div class="an-card-head">
+        <div class="an-card-title">
+            Recent Department Activity
+            <span>Latest requests routed to your department</span>
+        </div>
+        <a href="{% url 'orgbot:dept_requests' %}" class="btn btn-primary an-btn-view">View All Requests →</a>
+    </div>
+
+    {% if recent_requests %}
+        <div class="an-table-wrap">
+            <table class="an-table">
+                <thead>
+                    <tr>
+                        <th>Visitor</th>
+                        <th>Email</th>
+                        <th>Request Query</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in recent_requests %}
+                        <tr>
+                            <td>
+                                <div class="an-visitor">
+                                    <div class="an-visitor-avatar">{{ req.visitor_name|slice:":2"|upper }}</div>
+                                    <span class="an-visitor-name">{{ req.visitor_name }}</span>
+                                </div>
+                            </td>
+                            <td style="color: var(--db-accent-500);">{{ req.visitor_email }}</td>
+                            <td class="an-query-cell">{{ req.request_query }}</td>
+                            <td class="an-date-cell">{{ req.created_at|date:"d/m/Y - g:ia" }}</td>
+                            <td>
+                                {% if req.status == 'pending' %}
+                                    <span class="an-badge an-badge-pending">Pending</span>
+                                {% elif req.status == 'cleared' %}
+                                    <span class="an-badge an-badge-cleared">Cleared</span>
+                                {% elif req.status == 'forwarded' %}
+                                    <span class="an-badge an-badge-forwarded">Forwarded</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <a href="{% url 'orgbot:dept_request_detail' req.pk %}" class="btn btn-secondary an-btn-view">View Detail</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="an-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H7l-3 3V4z"/></svg>
+            <p>No recent requests received for this department.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

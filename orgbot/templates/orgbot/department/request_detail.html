@@ -1,0 +1,341 @@
+{% extends "orgbot/department/base_dashboard.html" %}
+
+{% block title %}Request #{{ req.pk }} Detail - {{ department.department_name }} Department{% endblock %}
+{% block page_title %}Manage Visitor Request #{{ req.pk }}{% endblock %}
+
+{% block dashboard_content %}
+<style>
+    /* Scoped to this page, reuses --db- tokens defined in base_dashboard.html */
+    .rd-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--db-text-600);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 18px;
+        transition: color 0.15s ease;
+    }
+    .rd-back svg { width: 14px; height: 14px; }
+    .rd-back:hover { color: var(--db-accent-600); }
+
+    .rd-layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+    @media (max-width: 860px) {
+        .rd-layout { grid-template-columns: 1fr; }
+    }
+
+    .rd-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--db-border);
+        padding-bottom: 18px;
+        margin-bottom: 20px;
+        gap: 12px;
+    }
+    .rd-head-eyebrow {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--db-text-400);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .rd-head-name {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 19px;
+        font-weight: 700;
+        color: var(--db-text-900);
+        margin-top: 3px;
+    }
+    .rd-head-visitor { display: flex; align-items: center; gap: 12px; }
+    .rd-visitor-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--db-accent-500), var(--db-sky-400));
+        color: #fff;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .rd-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .rd-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .rd-badge-pending { background: var(--db-warning-bg); color: var(--db-warning); }
+    .rd-badge-cleared { background: var(--db-success-bg); color: var(--db-success); }
+
+    .rd-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+    .rd-meta-label {
+        font-size: 11.5px;
+        color: var(--db-text-400);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 4px;
+    }
+    .rd-meta-value { font-size: 14px; color: var(--db-text-900); font-weight: 500; }
+    .rd-meta-value.rd-email { color: var(--db-accent-500); }
+
+    .rd-query-label {
+        font-size: 11.5px;
+        color: var(--db-text-400);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 6px;
+    }
+    .rd-query-box {
+        position: relative;
+        padding: 16px 18px;
+        background: var(--db-surface);
+        border: 1px solid var(--db-border);
+        border-left: 3px solid var(--db-accent-400);
+        border-radius: 10px;
+        font-size: 15px;
+        color: var(--db-text-900);
+        line-height: 1.55;
+        font-weight: 500;
+        margin-bottom: 22px;
+    }
+
+    .rd-reply-box {
+        margin-bottom: 22px;
+        padding: 16px 18px;
+        background: var(--db-success-bg);
+        border: 1px solid #b9ecd3;
+        border-radius: 10px;
+    }
+    .rd-reply-box-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--db-success);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 6px;
+    }
+    .rd-reply-box-text { font-size: 14px; color: #14532d; line-height: 1.55; }
+    .rd-reply-box-meta { font-size: 11.5px; color: var(--db-success); margin-top: 8px; opacity: 0.85; }
+
+    .rd-section {
+        border-top: 1px solid var(--db-border);
+        padding-top: 22px;
+    }
+    .rd-section-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--db-text-900);
+        margin-bottom: 12px;
+    }
+
+    .rd-textarea {
+        width: 100%;
+        padding: 13px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--db-border);
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        color: var(--db-text-900);
+        resize: vertical;
+        box-sizing: border-box;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .rd-textarea:focus {
+        outline: none;
+        border-color: var(--db-accent-400);
+        box-shadow: 0 0 0 3px var(--db-accent-glow);
+    }
+
+    .rd-form { display: flex; flex-direction: column; gap: 12px; }
+    .rd-btn-block { width: 100%; justify-content: center; }
+    .rd-btn-icon svg { width: 15px; height: 15px; }
+
+    .rd-side-card { margin-bottom: 20px; }
+    .rd-side-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--db-text-900);
+        margin-bottom: 10px;
+    }
+    .rd-side-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .rd-side-icon svg { width: 15px; height: 15px; }
+    .rd-side-text {
+        font-size: 13px;
+        color: var(--db-text-600);
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    .rd-select {
+        width: 100%;
+        padding: 11px 12px;
+        border-radius: 9px;
+        border: 1px solid var(--db-border);
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        color: var(--db-text-900);
+        background: var(--db-card);
+    }
+    .rd-select:focus { outline: none; border-color: var(--db-accent-400); box-shadow: 0 0 0 3px var(--db-accent-glow); }
+
+    .rd-danger-card {
+        border-color: #f7c9c9;
+        background: linear-gradient(180deg, #fff7f7, #fff5f5);
+    }
+    .rd-danger-icon { background: var(--db-error-bg); color: var(--db-error); }
+    .rd-forward-icon { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
+</style>
+
+<a href="{% url 'orgbot:dept_requests' %}" class="rd-back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Back to Requests List
+</a>
+
+<div class="rd-layout">
+
+    <!-- Left Column: Request Details & Reply Bar -->
+    <div>
+        <div class="card">
+            <div class="rd-head">
+                <div class="rd-head-visitor">
+                    <div class="rd-visitor-avatar">{{ req.visitor_name|slice:":2"|upper }}</div>
+                    <div>
+                        <div class="rd-head-eyebrow">Visitor Request</div>
+                        <div class="rd-head-name">{{ req.visitor_name }}</div>
+                    </div>
+                </div>
+                <div>
+                    {% if req.status == 'pending' %}
+                        <span class="rd-badge rd-badge-pending">Pending</span>
+                    {% elif req.status == 'cleared' %}
+                        <span class="rd-badge rd-badge-cleared">Cleared</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="rd-meta-grid">
+                <div>
+                    <div class="rd-meta-label">Visitor Email</div>
+                    <div class="rd-meta-value rd-email">{{ req.visitor_email }}</div>
+                </div>
+                <div>
+                    <div class="rd-meta-label">Submitted Date / Time</div>
+                    <div class="rd-meta-value">{{ req.created_at|date:"d/m/Y - g:ia" }}</div>
+                </div>
+            </div>
+
+            <div class="rd-query-label">User Question / Query</div>
+            <div class="rd-query-box">&ldquo;{{ req.request_query }}&rdquo;</div>
+
+            {% if req.status == 'cleared' and req.reply_message %}
+                <div class="rd-reply-box">
+                    <div class="rd-reply-box-label">Sent Email Response</div>
+                    <div class="rd-reply-box-text">&ldquo;{{ req.reply_message }}&rdquo;</div>
+                    <div class="rd-reply-box-meta">Sent on {{ req.replied_at|date:"d/m/Y - g:ia" }}</div>
+                </div>
+            {% endif %}
+
+            <!-- Reply Input Form -->
+            <div class="rd-section">
+                <h3 class="rd-section-title">Reply to Visitor</h3>
+                <form method="post" class="rd-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reply" />
+                    <textarea name="reply_message" rows="4" required placeholder="Type your response for {{ req.visitor_name }} (e.g. yes we have the Da Vinci Code book. but the new version not the old one)..." class="rd-textarea"></textarea>
+                    <button type="submit" class="btn btn-success rd-btn-icon" style="align-self: flex-start;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>
+                        Send Email Response to {{ req.visitor_email }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Actions (Forward & Delete) -->
+    <div>
+        <!-- Forward Card -->
+        <div class="card rd-side-card">
+            <div class="rd-side-title">
+                <div class="rd-side-icon rd-forward-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8l5 4-5 4"/><path d="M4 6v4a4 4 0 0 0 4 4h12"/></svg>
+                </div>
+                Forward Request
+            </div>
+            <p class="rd-side-text">
+                If this question belongs to another department, select the department to forward it.
+            </p>
+
+            <form method="post" class="rd-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="forward" />
+                <select name="target_department_id" required class="rd-select">
+                    <option value="">-- Select Department --</option>
+                    {% for d in other_departments %}
+                        <option value="{{ d.pk }}">{{ d.department_name }} Department</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary rd-btn-block">
+                    Forward Request
+                </button>
+            </form>
+        </div>
+
+        <!-- Delete Card -->
+        <div class="card rd-side-card rd-danger-card">
+            <div class="rd-side-title" style="color: #991b1b;">
+                <div class="rd-side-icon rd-danger-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </div>
+                Delete Request
+            </div>
+            <p class="rd-side-text" style="color: #7f1d1d;">
+                Permanently delete or hide this request from the active list.
+            </p>
+
+            <form method="post" onsubmit="return confirm('Are you sure you want to delete this request?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete" />
+                <button type="submit" class="btn btn-danger rd-btn-block">
+                    Delete Request
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

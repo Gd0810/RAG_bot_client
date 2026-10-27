@@ -48,17 +48,21 @@ def save_index(entries: List[Dict[str, Any]]):
             json.dump(entries, f, indent=2, ensure_ascii=False)
 
 
+URL_RE = re.compile(r"https?://[^\s\"'<>\)\]]+")
+
+
 def add_pages(pages: List[str], source_title: str, doc_id: int, urls: List[str] = None):
     """Append page-level entries for a document to the shared page index."""
     entries = load_index()
     next_id = (max((e.get("id", 0) for e in entries), default=0)) + 1
     for i, page in enumerate(pages):
+        page_urls = list(dict.fromkeys(URL_RE.findall(page)))
         entries.append({
             "id": next_id,
             "doc_id": doc_id,
             "source_title": source_title,
             "content": page,
-            "urls": urls or [],
+            "urls": page_urls[:5],
         })
         next_id += 1
     save_index(entries)

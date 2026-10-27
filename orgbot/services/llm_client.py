@@ -22,7 +22,7 @@ class LLMError(Exception):
     pass
 
 
-def _call_model(model: str, api_key: str, messages: list, temperature: float = 0.3, max_tokens: int = 700) -> str:
+def _call_model(model: str, api_key: str, messages: list, temperature: float = 0.3, max_tokens: int = 400) -> str:
     if not api_key:
         raise LLMError(
             f"NVIDIA API key is not configured for model '{model}'. "

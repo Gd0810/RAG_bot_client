@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Department Dashboard{% endblock %} - {{ profile.name|default:"SPIHER" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Surfaces */
+            --db-surface: #f5f6fb;
+            --db-card: #ffffff;
+            --db-border: #e6e8f0;
+
+            /* Sidebar */
+            --db-ink-900: #0a0f1f;
+            --db-ink-800: #131b30;
+            --db-ink-700: #1b2440;
+            --db-ink-muted: #8891ab;
+
+            /* Accent */
+            --db-accent-600: #4338ca;
+            --db-accent-500: #4f46e5;
+            --db-accent-400: #6366f1;
+            --db-accent-glow: rgba(79, 70, 229, 0.35);
+            --db-sky-400: #38bdf8;
+
+            /* Text */
+            --db-text-900: #0f1424;
+            --db-text-600: #5b6478;
+            --db-text-400: #9aa2b8;
+
+            /* Status */
+            --db-success: #0f9d63;
+            --db-success-bg: #e3f9ee;
+            --db-error: #dc2626;
+            --db-error-bg: #fdecec;
+            --db-warning: #b45309;
+            --db-warning-bg: #fef3e0;
+            --db-info: #0369a1;
+            --db-info-bg: #e6f4fd;
+
+            --db-radius: 14px;
+            --db-radius-sm: 9px;
+            --db-shadow-sm: 0 1px 2px rgba(15, 20, 36, 0.04), 0 1px 3px rgba(15, 20, 36, 0.04);
+            --db-shadow-md: 0 8px 24px rgba(15, 20, 36, 0.06);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        body {
+            background-color: var(--db-surface);
+            background-image:
+                radial-gradient(circle at 100% 0%, rgba(79, 70, 229, 0.06), transparent 40%),
+                radial-gradient(circle at 0% 100%, rgba(56, 189, 248, 0.05), transparent 35%);
+            background-attachment: fixed;
+            color: var(--db-text-900);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ================= Sidebar ================= */
+        .sidebar {
+            width: 264px;
+            background: linear-gradient(180deg, var(--db-ink-900) 0%, #0d1424 100%);
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            border-right: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .sidebar-brand {
+            padding: 26px 22px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, var(--db-accent-500), var(--db-accent-600));
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 16px var(--db-accent-glow);
+        }
+        .brand-icon svg { width: 20px; height: 20px; }
+        .brand-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
+        }
+        .brand-dept {
+            font-size: 11.5px;
+            color: var(--db-sky-400);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .sidebar-section-label {
+            padding: 22px 22px 8px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--db-ink-muted);
+        }
+
+        .sidebar-nav {
+            padding: 4px 12px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            overflow-y: auto;
+        }
+        .nav-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: var(--db-radius-sm);
+            color: var(--db-ink-muted);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            transition: background 0.16s ease, color 0.16s ease;
+        }
+        .nav-item svg {
+            width: 17px;
+            height: 17px;
+            flex-shrink: 0;
+            opacity: 0.85;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #f1f5f9;
+        }
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(79, 70, 229, 0.22), rgba(79, 70, 229, 0.06));
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .nav-item.active::before {
+            content: "";
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            border-radius: 0 4px 4px 0;
+            background: var(--db-accent-400);
+            box-shadow: 0 0 10px var(--db-accent-glow);
+        }
+        .nav-item.active svg { opacity: 1; }
+
+        .nav-badge {
+            margin-left: auto;
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 10.5px;
+            font-weight: 700;
+            min-width: 19px;
+            height: 19px;
+            padding: 0 6px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-footer {
+            padding: 16px 20px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #fca5a5;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 12px;
+            border-radius: var(--db-radius-sm);
+            transition: background 0.16s ease;
+        }
+        .logout-btn svg { width: 15px; height: 15px; }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.12); }
+
+        /* ================= Main ================= */
+        .main-wrapper {
+            margin-left: 264px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            height: 68px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--db-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .topbar-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            color: var(--db-text-900);
+            letter-spacing: -0.01em;
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--db-card);
+            border: 1px solid var(--db-border);
+            padding: 6px 14px 6px 6px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--db-text-600);
+            box-shadow: var(--db-shadow-sm);
+        }
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--db-accent-500), var(--db-sky-400));
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11.5px;
+            font-weight: 700;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .user-chip strong { color: var(--db-text-900); font-weight: 600; }
+        .user-status-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--db-success);
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px var(--db-success-bg);
+        }
+
+        /* ================= Content ================= */
+        .content-body {
+            padding: 32px;
+            flex: 1;
+        }
+
+        .messages-container { margin-bottom: 22px; display: flex; flex-direction: column; gap: 10px; }
+        .alert {
+            padding: 13px 16px;
+            border-radius: var(--db-radius-sm);
+            font-size: 13.5px;
+            font-weight: 500;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-success { background: var(--db-success-bg); color: var(--db-success); border-color: #b9ecd3; }
+        .alert-error { background: var(--db-error-bg); color: var(--db-error); border-color: #f8c9c9; }
+        .alert-warning { background: var(--db-warning-bg); color: var(--db-warning); border-color: #fbe0ad; }
+        .alert-info { background: var(--db-info-bg); color: var(--db-info); border-color: #bce3fa; }
+
+        .card {
+            background: var(--db-card);
+            border-radius: var(--db-radius);
+            border: 1px solid var(--db-border);
+            box-shadow: var(--db-shadow-sm);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 17px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.16s ease;
+        }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background: linear-gradient(135deg, var(--db-accent-500), var(--db-accent-600)); color: #ffffff; box-shadow: 0 4px 12px var(--db-accent-glow); }
+        .btn-primary:hover { filter: brightness(1.06); }
+        .btn-secondary { background: #f1f2f8; color: var(--db-text-600); }
+        .btn-secondary:hover { background: #e7e9f3; }
+        .btn-danger { background: #ef4444; color: #ffffff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: #10b981; color: #ffffff; }
+        .btn-success:hover { background: #059669; }
+
+        @media (max-width: 900px) {
+            .sidebar { width: 220px; }
+            .main-wrapper { margin-left: 220px; }
+            .content-body { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3L2 8l10 5 8-4.1V15h2V8L12 3z" fill="#ffffff"/>
+                <path d="M6 12.2V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8l-6 3-6-3z" fill="#ffffff" fill-opacity="0.85"/>
+            </svg>
+        </div>
+        <div>
+            <div class="brand-title">{{ profile.name|default:"SPIHER" }}</div>
+            <div class="brand-dept">{{ department.department_name }} Department</div>
+        </div>
+    </div>
+
+    <div class="sidebar-section-label">Workspace</div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'orgbot:dept_analytics' %}" class="nav-item {% if active_tab == 'analytics' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            Analytics
+        </a>
+        <a href="{% url 'orgbot:dept_requests' %}" class="nav-item {% if active_tab == 'requests' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H7l-3 3V4z"/></svg>
+            Requests
+        </a>
+        <a href="{% url 'orgbot:dept_forward_requests' %}" class="nav-item {% if active_tab == 'forward_requests' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8l5 4-5 4"/><path d="M4 6v4a4 4 0 0 0 4 4h12"/></svg>
+            Forwarded Requests
+            {% if incoming_forwarded_count %}
+                <span class="nav-badge">{{ incoming_forwarded_count }}</span>
+            {% endif %}
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="{% url 'orgbot:dept_logout' %}" class="logout-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            Sign Out
+        </a>
+    </div>
+</aside>
+
+<div class="main-wrapper">
+    <header class="topbar">
+        <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="user-chip">
+            <div class="user-avatar">{{ department.department_name|slice:":2"|upper }}</div>
+            <span>Logged in as <strong>{{ department.department_name }}</strong> Admin</span>
+            <span class="user-status-dot"></span>
+        </div>
+    </header>
+
+    <main class="content-body">
+        {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block dashboard_content %}{% endblock %}
+    </main>
+</div>
+
+</body>
+</html>

@@ -176,7 +176,7 @@
 
             sendBtn.innerHTML = originalBtnHtml;
 
-            appendMessage({
+            const msgWrap = appendMessage({
                 role: "bot",
                 html: data.answer_html,
                 model: data.model_used,
@@ -200,6 +200,69 @@
             input.focus();
         }
     }
+
+    // Event delegation on messages container for visitor request form submission
+    messages.addEventListener("submit", async function (e) {
+        if (!e.target || !e.target.classList.contains("visitor-req-form")) return;
+        e.preventDefault();
+
+        const vForm = e.target;
+        const card = vForm.closest(".visitor-request-card");
+        const statusDiv = card ? card.querySelector(".visitor-req-status") : null;
+        const nameInput = vForm.querySelector('input[name="name"]');
+        const emailInput = vForm.querySelector('input[name="email"]');
+
+        const nameVal = nameInput ? nameInput.value.trim() : "";
+        const emailVal = emailInput ? emailInput.value.trim() : "";
+        const requestQuery = vForm.getAttribute("data-query") || "";
+
+        if (!nameVal || !emailVal) return;
+
+        const submitBtn = vForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Submitting...";
+        }
+
+        try {
+            const res = await fetch(window.ORGBOT_SUBMIT_REQUEST_ENDPOINT || "/api/submit-visitor-request/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCsrfToken(),
+                },
+                body: JSON.stringify({
+                    request_query: requestQuery,
+                    name: nameVal,
+                    email: emailVal,
+                }),
+            });
+
+            const resData = await res.json();
+            if (res.ok && resData.success) {
+                vForm.style.display = "none";
+                if (statusDiv) {
+                    statusDiv.style.display = "block";
+                    statusDiv.textContent = "You will get a response shortly via email.";
+                }
+            } else {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Submit Request";
+                }
+                alert(resData.error || "Failed to submit request. Please try again.");
+            }
+        } catch (err) {
+            console.error("Submit visitor request error:", err);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Submit Request";
+            }
+            alert("Network error. Please try again.");
+        }
+    });
+
+
 
     form.addEventListener("submit", function (e) {
         e.preventDefault();

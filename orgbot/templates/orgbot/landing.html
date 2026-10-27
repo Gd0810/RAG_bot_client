@@ -12,6 +12,7 @@
             <a href="#about">About</a>
             <a href="#gallery">Gallery</a>
             <a href="#chat">Ask our AI</a>
+            <a href="{% url 'orgbot:dept_login' %}" style="background: rgba(37, 99, 235, 0.1); color: #2563eb; padding: 6px 14px; border-radius: 20px; font-weight: 600; text-decoration: none; border: 1px solid rgba(37, 99, 235, 0.2); transition: all 0.2s;" onmouseover="this.style.background='#2563eb'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(37, 99, 235, 0.1)'; this.style.color='#2563eb';">Dashboard Login</a>
         </div>
     </div>
 </nav>
@@ -25,10 +26,12 @@
             <p class="about-snippet">{{ profile.about }}</p>
             <div class="hero-actions">
                 <a href="#chat" class="btn btn-primary">Chat with our AI Assistant</a>
+                <a href="{% url 'orgbot:dept_login' %}" class="btn btn-ghost">Department Login</a>
                 {% if profile.website_url %}
                 <a href="{{ profile.website_url }}" class="btn btn-ghost" target="_blank" rel="noopener">Visit Website</a>
                 {% endif %}
             </div>
+
         </div>
         <div class="hero-image-wrap">
             {% if profile.hero_image %}
@@ -109,7 +112,7 @@
                 {% if profile.gallery_image_1 %}
                     <img src="{{ profile.gallery_image_1.url }}" alt="Gallery image 1">
                 {% else %}
-                    <img src="https://placehold.co/500x350/png?text=Our+Team" alt="Placeholder gallery image 1">
+                    <img src="{% static 'orgbot/images/team.jpeg' %}" alt="Placeholder gallery image 1">
                 {% endif %}
                 <p>Our Team</p>
             </div>
@@ -117,12 +120,16 @@
                 {% if profile.gallery_image_2 %}
                     <img src="{{ profile.gallery_image_2.url }}" alt="Gallery image 2">
                 {% else %}
-                    <img src="https://placehold.co/500x350/png?text=Our+Workspace" alt="Placeholder gallery image 2">
+                    <img src="{% static 'orgbot/images/work.jpeg' %}" alt="Placeholder gallery image 2">
                 {% endif %}
                 <p>Our Workspace</p>
             </div>
             <div class="gallery-card">
-                <img src="https://placehold.co/500x350/png?text=Our+Impact" alt="Placeholder gallery image 3">
+                {% if profile.gallery_image_3 %}
+                    <img src="{{ profile.gallery_image_3.url }}" alt="Gallery image 3">
+                {% else %}
+                    <img src="{% static 'orgbot/images/impact.jpeg' %}" alt="Placeholder gallery image 3">
+                {% endif %}
                 <p>Our Impact</p>
             </div>
         </div>
@@ -205,5 +212,7 @@
 {% block extra_scripts %}
 <script>
     window.ORGBOT_CHAT_ENDPOINT = "{% url 'orgbot:chat_api' %}";
+    window.ORGBOT_SUBMIT_REQUEST_ENDPOINT = "{% url 'orgbot:submit_visitor_request' %}";
 </script>
 {% endblock %}
+

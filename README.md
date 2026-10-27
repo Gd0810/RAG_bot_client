@@ -62,6 +62,10 @@ Then open:
 - **Landing page + chatbot:** http://127.0.0.1:8000/
 - **Admin dashboard:** http://127.0.0.1:8000/admin/
 
+On Windows, you can instead double-click `run_local.bat`. It starts Django and
+opens the landing page using HTTP. Do not change the address to `https://`;
+the Django development server does not provide HTTPS.
+
 ## 3. Get your free NVIDIA API key
 
 1. Go to https://build.nvidia.com/models
